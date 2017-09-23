@@ -1,3 +1,6 @@
+import os
+
+import errno
 from bs4 import BeautifulSoup
 # import pandas as pd
 import json
@@ -32,6 +35,7 @@ def get_doctor_links(page, timeout=0.1):
     :param page: request.text
     :return:
     """
+    print("Collecting basic info per doctor")
     soup = BeautifulSoup(page, 'html.parser')
     doc = {}
     for a_tag in soup.find_all('a', href=re.compile("/news/\w+/1-0-[0-9]+")):
@@ -42,7 +46,7 @@ def get_doctor_links(page, timeout=0.1):
         max_page = get_max_question_block_page(sp.select('div[class="paging-block"]')[0].select('a[href]'))
         # doctors[a_tag.text] = {
         doc[a_tag.text] = {
-            'link': the_url + link,
+            'link': link,
             'max_page': max_page,
             'question_links': [],
             'questions': []
@@ -80,7 +84,7 @@ def get_max_question_block_page(links):
     return max_page
 
 
-def get_question_links(link, max_page, timeout=0.25):
+def get_question_links(link, max_page, timeout=0.1):
         """Given the doctor page, extract all questions' links.
         For example:
             link: http://03online.com/news/allergolog/1-0-23
@@ -110,8 +114,56 @@ def get_question_links(link, max_page, timeout=0.25):
             # print(rq.ok)
             sq = BeautifulSoup(rqb.text, 'html.parser')
             question_links = get_question_links_per_page(sq)
+            questions_per_block = []
             time.sleep(timeout)
         return question_links
+
+
+def get_n_question_blocks_per_doc(doc_link, blocks=3, timeout=0.1):
+    """Given the doctor page, extract all questions' links.
+    For example:
+        link: http://03online.com/news/allergolog/1-0-23
+        max_page: 457
+    :param doc_link[string]
+    :param blocks[int]
+    :param timeout[int] between retries
+    :return list[question_link]
+    """
+
+    def get_question_links_per_page(tag):
+        """
+        Given the area tag return list of links for all questions on this page.
+        :param tag: soup top level tag
+        :return: list of question links on this specific page
+        """
+        blocks = tag.select('#content_main > div.question-short-block > div.header > a')
+        links = [the_url + b['href'] for b in blocks]
+
+        return links
+
+    # question_links = []
+    questions = []
+    doc = doc_link.lstrip(the_url + '/news/').split('/')[0]
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    filename = "data/{}.json".format(doc)
+    for b in range(1, blocks + 1):
+        u = doc_link.replace('/1-', '/{}-'.format(b))
+        print(u)
+        rqb = requests.get(u)  # request questions block page
+        # print(rq.ok)
+        sq = BeautifulSoup(rqb.text, 'html.parser')
+        question_block_links = get_question_links_per_page(sq)
+        print("question block links:", question_block_links)
+        questions_per_block = []
+        for ql in question_block_links:
+            print("processing link:", ql)
+            req = requests.get(ql)
+            questions_per_block.append(scrape_question(req.text))
+        questions.append(questions_per_block)
+        time.sleep(timeout)
+    with open(filename, 'w') as f:
+        json.dump(questions, f)
+    return questions
 
 
 def scrape_question(page_text):
@@ -124,7 +176,14 @@ def scrape_question(page_text):
         sq = BeautifulSoup(page_text, 'html.parser')
         question_raw = sq.select("#content_main > div.divide-block.question-block")[0]
         question = Question(question_raw)
-        return question
+        # TODO: add answers:
+        # answers = question_block.select('#answers_block > div.answer-block.doctor-block')[0]
+        # if len(answers.find_all('div', {'class': 'answer-block doctor-block'})) > 0:
+        #     ans = answers.find_all('div', {'class': 'answer-block doctor-block'})
+        # else:
+        #     ans = []
+
+        return question.__dict__
 
 
 if __name__ == "__main__":
@@ -142,28 +201,31 @@ if __name__ == "__main__":
 
     doctors = get_doctor_links(rm.text)
 
+    with open('doctors_info.json', 'w') as outfile:
+        json.dump(doctors, outfile)
+    for d, v in doctors.items():  # replace below line when testing completed
+        get_n_question_blocks_per_doc(v['link'], blocks = 100)
+
     # collect questions urls from block pages
     # for d, v in d1.items(): # purely for testing
-    for d, v in doctors.items():  # replace below line when testing completed
-        v['question_links'] = get_question_links(v['link'], v['max_page'])
-        doctors[d] = v
+    # for d, v in doctors.items():  # replace below line when testing completed
+    #     v['question_links'] = get_question_links(v['link'], v['max_page'])
+    #     doctors[d] = v
 
-    with open('doctors_basic.json', 'w') as outfile:
-        json.dump(doctors, outfile)
-
-    for d, v in doctors.items():
-        questions = []
-        for l in v['question_links']:
-            print("Collection questions for page", l)
-            rq = requests.get(l)
-            scrape_question(rq.text)
-            questions.extend(q)
-            v['questions'] = questions
-            doctors[d] = v
-            time.sleep(0.25)
-        doc = v['link'].lstrip(the_url + '/news/').split('/')[0]
-        with open(doc + '.json', 'w') as outfile:
-            json.dump(v, outfile)
+    # for d, v in doctors.items():
+    #     questions = []
+    #     question_links = get_question_links(v['link'], v['max_page'])
+    #     for l in v['question_links']:
+    #         print("Collection questions for page", l)
+    #         rq = requests.get(l)
+    #         scrape_question(rq.text)
+    #         questions.extend(q)
+    #         v['questions'] = questions
+    #         doctors[d] = v
+    #         time.sleep(0.1)
+    #     doc_name = v['link'].lstrip(the_url + '/news/').split('/')[0]
+    #     with open(doc_name + '.json', 'w') as outfile:
+    #         json.dump(v, outfile)
 
     # pprint(doctors['Аллерголог'])
 
