@@ -29,13 +29,16 @@ class Question:
             'href'].lstrip('/news/')
         ans_block = sp.select('#answers_block')[0]
         ans = ans_block.select('div.answer-block.doctor-block > div.body.right')
-        if len(ans) > 0:
-            self.answer = {
-                'doctor_name': ans[0].select('div.header > a')[0].text,
-                'doctor': ans[0].select('div.header > span.doctor')[0].text,
-                'date': ans[0].select('div.header > span.date')[0].text,
-                'content': ans[0].select('div.content')[0].text,
-            }
+        if len(ans) > 0 and answers > 0:
+            try:
+                self.answer = {
+                    'doctor_name': ans[0].select('div.header > a')[0].text,
+                    'doctor': ans[0].select('div.header > span.doctor')[0].text,
+                    'date': ans[0].select('div.header > span.date')[0].text,
+                    'content': ans[0].select('div.content')[0].text,
+                }
+            except:
+                self.answer = {}
         else:
             self.answer = {}
 
