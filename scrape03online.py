@@ -133,7 +133,7 @@ def get_question_links(link, max_page, timeout=0.1):
     return question_links
 
 
-def get_n_question_blocks_per_doc(doc_link, blocks=3, timeout=0.1):
+def get_n_question_blocks_per_doc(doc_name, values, blocks=3, timeout=0.1):
     """Given the doctor page, extract all questions' links.
     For example:
         link: http://03online.com/news/allergolog/1-0-23
@@ -156,11 +156,12 @@ def get_n_question_blocks_per_doc(doc_link, blocks=3, timeout=0.1):
         return links
 
     # question_links = []
+    doc_link = values['link']
     questions = []
     doc = doc_link.lstrip(the_url + '/news/').split('/')[0]
     filename = "data/{}.json".format(doc)
     os.makedirs(os.path.dirname(filename), exist_ok=True)
-    for b in range(1, blocks + 1):
+    for b in range(1, min(values['max_page'], blocks) + 1):
         u = doc_link.replace('/1-', '/{}-'.format(b))
         print(u)
         rqb = requests.get(u)  # request questions block page
@@ -177,11 +178,12 @@ def get_n_question_blocks_per_doc(doc_link, blocks=3, timeout=0.1):
                 req = requests.get(ql)
                 try:
                     the_question = scrape_question(req.text, ans)
-                    questions_per_block.append(the_question)
+                    # questions_per_block.append(the_question)
+                    questions.append(the_question)
                 except Exception as e:
                     print("Failed to process", ql)
                     print("Exception", e)
-            questions.append(questions_per_block)
+            # questions.append(questions_per_block)
             time.sleep(timeout)
         except Exception as e:
             print("Unable to process question block. ", e)
@@ -222,7 +224,7 @@ if __name__ == "__main__":
     with open('doctors_info.json', 'w') as outfile:
         json.dump(doctors, outfile)
     for d, v in doctors.items():  # replace below line when testing completed
-        q = get_n_question_blocks_per_doc(v['link'], blocks=100)
+        q = get_n_question_blocks_per_doc(d, v, blocks=100)
 
         # collect questions urls from block pages
         # for d, v in d1.items(): # purely for testing
