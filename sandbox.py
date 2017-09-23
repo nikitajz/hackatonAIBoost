@@ -1,7 +1,8 @@
 from bs4 import BeautifulSoup
 import requests
 
-u = "http://03online.com/news/bespokoit_allergiya/2017-9-22-337414"
+# u = "http://03online.com/news/bespokoit_allergiya/2017-9-22-337414"
+u = "http://03online.com/news/nizkiy_ig_e_no_vysypaniya_ne_prohodyat/2017-9-22-337601"
 rm = requests.get(u)
 soup = BeautifulSoup(rm.text, 'html.parser')
 

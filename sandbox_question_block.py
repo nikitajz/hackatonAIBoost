@@ -6,6 +6,7 @@ u = "http://03online.com/news/allergolog/1-0-23"
 rm = requests.get(u)
 soup = BeautifulSoup(rm.text, 'html.parser')
 
+
 def get_question_links_per_page(tag):
     """
     Given the area tag return list of links for all questions on this page.

@@ -83,7 +83,7 @@ class Question:
         self.chronic_condition = content.select('div.extra-info.top > div')[3].select('i')[0].text
         self.text = content.select('div.text')[0].text
         self.cat_title = question_block.select('div.question-content > div.extra-info.bottom > div.cat > a')[0].text
-        self.cat_link = question_block.select('div.question-content > div.extra-info.bottom > div.cat > a')[0]['href']
+        self.cat_link = the_url + question_block.select('div.question-content > div.extra-info.bottom > div.cat > a')[0]['href']
         self.published_date = question_block.select('div.question-content > div.extra-info.bottom > div.cat > a')[1]['href'].lstrip('/news/')
 
 
@@ -113,9 +113,9 @@ def get_question_links(link, max_page, timeout=0.25):
     for p in range(1, max_page + 1):
         u = link.replace('/1-', '/{}-'.format(p))
         print(u)
-        rq = requests.get(u)  # request questions block page
+        rqb = requests.get(u)  # request questions block page
         # print(rq.ok)
-        sq = BeautifulSoup(rq.text, 'html.parser')
+        sq = BeautifulSoup(rqb.text, 'html.parser')
         question_links = get_question_links_per_page(sq)
         time.sleep(timeout)
     return question_links
@@ -127,13 +127,29 @@ for d, v in doctors.items():  # replace below line when testing completed
     v['question_links'] = get_question_links(v['link'], v['max_page'])
     doctors[d] = v
 
+with open('doctors_basic.json', 'w') as outfile:
+    json.dump(doctors, outfile)
+
+
+def scrape_question(page_text):
+    """
+    Scrape the questions from specific question page
+    :param the_link: str
+    :return: Question
+    """
+
+    sq = BeautifulSoup(page_text, 'html.parser')
+    question_raw = sq.select("#content_main > div.divide-block.question-block")[0]
+    question = Question(question_raw)
+    return question
+
 
 for d, v in doctors.items():
     questions = []
     for l in v['question_links']:
         print("Collection questions for page", l)
-        question_tags = soup.select("#content_main > div.divide-block.question-block")[0]
-        q = Question(question_tags)
+        rq = requests.get(l)
+        scrape_question(rq.text)
         questions.extend(q)
         v['questions'] = questions
         doctors[d] = v
