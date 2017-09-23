@@ -8,6 +8,7 @@ import time
 
 the_url = "http://03online.com"
 
+
 class Question:
     def __init__(self, question_block):
         self.title = question_block.select('h1[class="title"]')[0].text
@@ -23,6 +24,31 @@ class Question:
                         question_block.select('div.question-content > div.extra-info.bottom > div.cat > a')[0]['href']
         self.published_date = question_block.select('div.question-content > div.extra-info.bottom > div.cat > a')[1][
             'href'].lstrip('/news/')
+
+
+def get_doctor_links(page, timeout=0.1):
+    """
+    For the page scrape link for each doctor and max_page.
+    :param page: request.text
+    :return:
+    """
+    soup = BeautifulSoup(page, 'html.parser')
+    doc = {}
+    for a_tag in soup.find_all('a', href=re.compile("/news/\w+/1-0-[0-9]+")):
+        # print(a)
+        link = the_url + a_tag['href']
+        rp = requests.get(link)  # request question blocks page
+        sp = BeautifulSoup(rp.text, 'html.parser')
+        max_page = get_max_question_block_page(sp.select('div[class="paging-block"]')[0].select('a[href]'))
+        # doctors[a_tag.text] = {
+        doc[a_tag.text] = {
+            'link': the_url + link,
+            'max_page': max_page,
+            'question_links': [],
+            'questions': []
+            }
+        time.sleep(timeout)
+    return doc
 
 
 def get_max_question_block_page(links):
@@ -108,44 +134,13 @@ if __name__ == "__main__":
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:45.0) Gecko/20100101 Firefox/45.0'
         })
 
-
-
     rm = requests.get(the_url)
 
     soup = BeautifulSoup(rm.text, 'html.parser')
 
     # print(soup.prettify())
 
-    doctors = dict()
-
-    # collect a link for each doctor/group
-    for a in soup.find_all('a', href=re.compile("/news/\w+/1-0-[0-9]+")):
-        # print(a)
-        doctors[a.text] = {
-            'link': the_url + a['href'],
-            'max_page': 1,
-            'question_links': [],
-            'questions': []
-            }
-
-
-
-
-    # d1 = {'Аллерголог': {'link': the_url + '/news/allergolog/1-0-23'}}  # for testing only
-
-    # get latest question block page
-    # for (d, v) in d1.items():  # purely for testing
-    for d, v in doctors.items():  # replace near line when testing completed
-        rp = requests.get(v['link'])  # request question blocks page
-        sp = BeautifulSoup(rp.text, 'html.parser')
-        v['max_page'] = get_max_question_block_page(sp.select('div[class="paging-block"]')[0].select('a[href]'))
-        doctors[d] = v
-        time.sleep(0.25)
-
-
-
-
-
+    doctors = get_doctor_links(rm.text)
 
     # collect questions urls from block pages
     # for d, v in d1.items(): # purely for testing
@@ -155,9 +150,6 @@ if __name__ == "__main__":
 
     with open('doctors_basic.json', 'w') as outfile:
         json.dump(doctors, outfile)
-
-
-
 
     for d, v in doctors.items():
         questions = []
@@ -169,12 +161,12 @@ if __name__ == "__main__":
             v['questions'] = questions
             doctors[d] = v
             time.sleep(0.25)
+        doc = v['link'].lstrip(the_url + '/news/').split('/')[0]
+        with open(doc + '.json', 'w') as outfile:
+            json.dump(v, outfile)
 
-
-    pprint(doctors['Аллерголог'])
+    # pprint(doctors['Аллерголог'])
 
     # TODO: add throttling
     # TODO: add export to file (json?)
 
-    with open('data2.txt', 'w') as outfile:
-        json.dump(doctors, outfile)
