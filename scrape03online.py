@@ -3,7 +3,7 @@ import os
 from bs4 import BeautifulSoup
 # import pandas as pd
 import json
-from pprint import pprint
+# from pprint import pprint
 import requests
 import re
 import time
@@ -58,7 +58,6 @@ def get_doctor_links(page, timeout=0.1):
         rp = requests.get(link)  # request question blocks page
         sp = BeautifulSoup(rp.text, 'html.parser')
         max_page = get_max_question_block_page(sp.select('div[class="paging-block"]')[0].select('a[href]'))
-        # doctors[a_tag.text] = {
         doc[a_tag.text] = {
             'link': link,
             'max_page': max_page,
@@ -128,7 +127,6 @@ def get_question_links(link, max_page, timeout=0.1):
         # print(rq.ok)
         sq = BeautifulSoup(rqb.text, 'html.parser')
         question_links = get_question_links_per_page(sq)
-        questions_per_block = []
         time.sleep(timeout)
     return question_links
 
@@ -178,12 +176,10 @@ def get_n_question_blocks_per_doc(doc_name, values, blocks=3, timeout=0.1):
                 req = requests.get(ql)
                 try:
                     the_question = scrape_question(req.text, ans)
-                    # questions_per_block.append(the_question)
                     questions.append(the_question)
                 except Exception as e:
                     print("Failed to process", ql)
                     print("Exception", e)
-            # questions.append(questions_per_block)
             time.sleep(timeout)
         except Exception as e:
             print("Unable to process question block. ", e)
@@ -224,30 +220,6 @@ if __name__ == "__main__":
     with open('doctors_info.json', 'w') as outfile:
         json.dump(doctors, outfile)
     for d, v in doctors.items():  # replace below line when testing completed
-        q = get_n_question_blocks_per_doc(d, v, blocks=100)
-
-        # collect questions urls from block pages
-        # for d, v in d1.items(): # purely for testing
-        # for d, v in doctors.items():  # replace below line when testing completed
-        #     v['question_links'] = get_question_links(v['link'], v['max_page'])
-        #     doctors[d] = v
-
-        # for d, v in doctors.items():
-        #     questions = []
-        #     question_links = get_question_links(v['link'], v['max_page'])
-        #     for l in v['question_links']:
-        #         print("Collection questions for page", l)
-        #         rq = requests.get(l)
-        #         scrape_question(rq.text)
-        #         questions.extend(q)
-        #         v['questions'] = questions
-        #         doctors[d] = v
-        #         time.sleep(0.1)
-        #     doc_name = v['link'].lstrip(the_url + '/news/').split('/')[0]
-        #     with open(doc_name + '.json', 'w') as outfile:
-        #         json.dump(v, outfile)
-
-        # pprint(doctors['Аллерголог'])
+        q = get_n_question_blocks_per_doc(d, v, blocks=800)
 
         # TODO: add throttling
-        # TODO: add export to file (json?)
