@@ -165,19 +165,27 @@ def get_n_question_blocks_per_doc(doc_link, blocks=3, timeout=0.1):
         print(u)
         rqb = requests.get(u)  # request questions block page
         # print(rq.ok)
-        sq = BeautifulSoup(rqb.text, 'html.parser')
-        question_block_links = get_question_links_per_page(sq)
-        ans = int(sq.select('div[class="question-short-block"]')[0]
-                  .select('div.extra > div.comments > div.value')[0].text)
-        print("question block links:", question_block_links)
-        questions_per_block = []
-        for ql in question_block_links:
-            # print("processing link:", ql)
-            req = requests.get(ql)
-            questions_per_block.append(scrape_question(req.text, ans))
-        questions.append(questions_per_block)
-        time.sleep(timeout)
-    print('Saving file', filename)
+        try:
+            sq = BeautifulSoup(rqb.text, 'html.parser')
+            question_block_links = get_question_links_per_page(sq)
+            ans = int(sq.select('div[class="question-short-block"]')[0]
+                      .select('div.extra > div.comments > div.value')[0].text)
+            print("question block links:", question_block_links)
+            questions_per_block = []
+            for ql in question_block_links:
+                # print("processing link:", ql)
+                req = requests.get(ql)
+                try:
+                    the_question = scrape_question(req.text, ans)
+                    questions_per_block.append(the_question)
+                except Exception as e:
+                    print("Failed to process", ql)
+                    print("Exception", e)
+            questions.append(questions_per_block)
+            time.sleep(timeout)
+        except Exception as e:
+            print("Unable to process question block. ", e)
+    print('Saving {} questions to file {}'.format(len(questions), filename))
     with open(filename, 'w') as f:
         json.dump(questions, f)
     return questions
@@ -214,7 +222,7 @@ if __name__ == "__main__":
     with open('doctors_info.json', 'w') as outfile:
         json.dump(doctors, outfile)
     for d, v in doctors.items():  # replace below line when testing completed
-        get_n_question_blocks_per_doc(v['link'], blocks=100)
+        q = get_n_question_blocks_per_doc(v['link'], blocks=100)
 
         # collect questions urls from block pages
         # for d, v in d1.items(): # purely for testing
