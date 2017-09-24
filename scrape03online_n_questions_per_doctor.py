@@ -13,12 +13,12 @@ doctor_link = 'http://03online.com/news/allergolog/1-0-23'
 
 doc = {
             'link': doctor_link,
-            'max_page': max_page,
+            'max_page': 457,
             'question_links': [],
             'questions': []
         }
 
-get_n_question_blocks_per_doc({'allergolog', doc})
+get_n_question_blocks_per_doc('allergolog', doc, blocks=457)
 
 
 ## questions/answers per doc

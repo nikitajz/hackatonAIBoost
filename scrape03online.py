@@ -170,7 +170,6 @@ def get_n_question_blocks_per_doc(doc_name, values, blocks=3, timeout=0.1):
             ans = int(sq.select('div[class="question-short-block"]')[0]
                       .select('div.extra > div.comments > div.value')[0].text)
             print("question block links:", question_block_links)
-            questions_per_block = []
             for ql in question_block_links:
                 # print("processing link:", ql)
                 req = requests.get(ql)
@@ -222,4 +221,4 @@ if __name__ == "__main__":
     for d, v in doctors.items():  # replace below line when testing completed
         q = get_n_question_blocks_per_doc(d, v, blocks=800)
 
-        # TODO: add throttling
+    # TODO: add throttling
